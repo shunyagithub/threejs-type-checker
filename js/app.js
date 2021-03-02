@@ -1,16 +1,16 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer"
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js"
 import * as CANNON from "cannon-es"
 import gsap from "gsap"
 import Stats from "stats.js"
 import * as dat from "dat.gui"
 import cannonDebugger from "cannon-es-debugger"
 
-import myMatcap from "../img/matcaps/3.png"
-import myModel from "../models/pc2.glb"
+import myMatcap1 from "../img/matcaps/9.png"
+import myMatcap2 from "../img/matcaps/10.png"
+import myMatcap3 from "../img/matcaps/11.png"
+import myModel from "../models/pc3.glb"
 
 export default class Sketch {
   constructor(options) {
@@ -20,13 +20,15 @@ export default class Sketch {
      */
     this.stats = new Stats()
     this.stats.showPanel(0)
-    // document.body.appendChild(this.stats.dom)
+    document.body.appendChild(this.stats.dom)
 
     /**
      * Textures
      */
     this.textureLoader = new THREE.TextureLoader()
-    this.matcapTexture = this.textureLoader.load(myMatcap)
+    this.matcapTexture = this.textureLoader.load(myMatcap1)
+    this.matcapTexture2 = this.textureLoader.load(myMatcap2)
+    this.matcapTexture3 = this.textureLoader.load(myMatcap3)
 
     /**
      * Utils
@@ -37,6 +39,8 @@ export default class Sketch {
     this.oldElapsedTime = 0
     this.objectToUpdate = []
 
+    this.letterCount = 80
+
     //keys
     this.textOnSide = null
     this.keysObjcts = null
@@ -45,8 +49,8 @@ export default class Sketch {
      * Scene
      */
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x000000)
-    this.scene.add(new THREE.GridHelper(20, 40, "green", "green"))
+    this.scene.background = new THREE.Color(0xffffff)
+    this.scene.add(new THREE.GridHelper(20, 40))
 
     this.width = this.container.offsetWidth
     this.height = this.container.offsetHeight
@@ -147,7 +151,7 @@ export default class Sketch {
     this.floorGeo = new THREE.PlaneBufferGeometry(20, 20)
     this.floorGeo.rotateX(-Math.PI * 0.5)
     this.material = new THREE.MeshBasicMaterial({
-      color: 0x000000,
+      color: 0xffffff,
     })
     this.floor = new THREE.Mesh(this.floorGeo, this.material)
 
@@ -164,9 +168,9 @@ export default class Sketch {
     //Display
     this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.6)
     this.displayMaterial = new THREE.MeshBasicMaterial({
-      color: "green",
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.5,
     })
     this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
     this.display.position.set(0, 0.75, 2.97)
@@ -224,12 +228,12 @@ export default class Sketch {
         font: font,
         size: 1,
         height: 0.4,
-        curveSegments: 5,
+        curveSegments: 15,
         bevelEnabled: true,
         bevelThickness: 0.05,
-        bevelSize: 0.07,
+        bevelSize: 0.05,
         bevelOffset: 0,
-        bevelSegments: 5,
+        bevelSegments: 15,
       })
 
       const keyCodeGeometry = new THREE.TextBufferGeometry(KEYCODE, {
@@ -246,9 +250,32 @@ export default class Sketch {
       keyNameGeometry.center()
       keyCodeGeometry.center()
 
+      const matcaps = [
+        this.matcapTexture,
+        this.matcapTexture2,
+        this.matcapTexture3,
+      ]
+
+      let randomMatcap
+      console.log(((e.keyCode * Math.random()) % 3).toFixed(0))
+
+      switch (Number(((e.keyCode * Math.random()) % 3).toFixed(0))) {
+        case 0:
+          randomMatcap = matcaps[0]
+          break
+        case 1:
+          randomMatcap = matcaps[1]
+          break
+        case 2:
+          randomMatcap = matcaps[2]
+          break
+        default:
+          randomMatcap = matcaps[0]
+      }
+
       const size = keyNameGeometry.boundingBox.getSize(new THREE.Vector3()) //get size for cannon body
       const material = new THREE.MeshMatcapMaterial({
-        matcap: this.matcapTexture,
+        matcap: randomMatcap,
       })
       const mesh = new THREE.Mesh(keyNameGeometry, material)
       mesh.position.y = 0.5
@@ -326,7 +353,7 @@ export default class Sketch {
   }
 
   addFog() {
-    const fog = new THREE.Fog(0x050505, 5, 8)
+    const fog = new THREE.Fog(0xffffff, 8, 10)
     this.scene.fog = fog
   }
 
@@ -345,7 +372,7 @@ export default class Sketch {
     this.world.step(1 / 60, deltaTime, 3)
 
     //remove letter
-    if (this.objectToUpdate.length > 50) {
+    if (this.objectToUpdate.length > this.letterCount) {
       this.removeLetter()
     }
 
