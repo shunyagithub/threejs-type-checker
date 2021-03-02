@@ -4,31 +4,21 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import * as CANNON from "cannon-es"
 import gsap from "gsap"
 import Stats from "stats.js"
-import { AmbientLight } from "three"
-import { World } from "cannon-es"
+import * as dat from "dat.gui"
+import cannonDebugger from "cannon-es-debugger"
 
-import myMatcap from "../matcaps/eva01-3.png"
-import myModel from "../models/pc.glb"
-import envPx from "../img/envmaps/0/px.png"
-import envNx from "../img/envmaps/0/nx.png"
-import envPy from "../img/envmaps/0/py.png"
-import envNy from "../img/envmaps/0/ny.png"
-import envPz from "../img/envmaps/0/pz.png"
-import envNz from "../img/envmaps/0/nz.png"
+import myMatcap from "../img/matcaps/3.png"
+import myModel from "../models/pc2.glb"
 
 export default class Sketch {
   constructor(options) {
-    this.clock = new THREE.Clock()
-    this.oldElapsedTime = 0
-    this.container = options.dom
-
     /**
      *
      * Stats
      */
     this.stats = new Stats()
     this.stats.showPanel(0)
-    document.body.appendChild(this.stats.dom)
+    // document.body.appendChild(this.stats.dom)
 
     /**
      * Textures
@@ -39,49 +29,25 @@ export default class Sketch {
     /**
      * Utils
      */
+    this.container = options.dom
+
+    this.clock = new THREE.Clock()
+    this.oldElapsedTime = 0
     this.objectToUpdate = []
-    this.textOnSide = null
 
     //keys
+    this.textOnSide = null
     this.keysObjcts = null
 
     /**
      * Scene
      */
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color("gray")
-    this.scene.add(new THREE.GridHelper(20, 40))
+    this.scene.background = new THREE.Color(0x000000)
+    this.scene.add(new THREE.GridHelper(20, 40, "green", "green"))
 
     this.width = this.container.offsetWidth
     this.height = this.container.offsetHeight
-
-    //Update materials
-    this.updateAllMaterials = () => {
-      this.scene.traverse((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          child.material instanceof THREE.MeshStandardMaterial
-        ) {
-          child.material.envMapIntensity = Object.envMapIntensity
-          child.castShadow = true
-          child.receiveShadow = true
-        }
-      })
-    }
-
-    //envMap
-    const cubeTextureLoader = new THREE.CubeTextureLoader()
-    this.enviromentMap = cubeTextureLoader.load([
-      envPx,
-      envNx,
-      envPy,
-      envNy,
-      envPz,
-      envNz,
-    ])
-    this.enviromentMap.encoding = THREE.sRGBEncoding
-    this.scene.environment = this.enviromentMap
-    this.objectToUpdate.envMapIntensity = 5
 
     /**
      * Camera
@@ -93,7 +59,7 @@ export default class Sketch {
       100
     )
     this.camera.updateProjectionMatrix()
-    this.camera.position.set(0, 0.5, 5)
+    this.camera.position.set(0, 1, 6)
 
     /**
      * Cannon
@@ -110,7 +76,7 @@ export default class Sketch {
       this.defaultMaterial,
       {
         friction: 0.1,
-        restitution: 0.6, //bounce def .3
+        restitution: 0.1, //bounce def .3
       }
     )
     this.world.addContactMaterial(this.defaultContactMaterial)
@@ -120,8 +86,6 @@ export default class Sketch {
      * Renderer
      */
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
-    this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.setSize(this.width, this.height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.container.appendChild(this.renderer.domElement)
@@ -132,32 +96,31 @@ export default class Sketch {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
 
-    document.addEventListener("DOMContentLoaded", () => {
-      // displayValues({}, "keydown");
+    /**
+     * Press Keys
+     */
+    document.addEventListener("keydown", (e) => {
+      this.addLetter(e)
 
-      document.addEventListener("keydown", (e) => {
-        this.addLetter(e)
+      //press random key
+      this.randomNum = gsap.utils.random(0, 22, 1)
+      this.keys = this.keysObjcts.slice(4, 27)
+      this.randomKey = this.keys[this.randomNum]
 
-        //press random key
-        this.randomNum = gsap.utils.random(0, 22, 1)
-        this.keys = this.keysObjcts.slice(4, 27)
-        this.randomKey = this.keys[this.randomNum]
-
-        gsap.to(this.randomKey.position, {
-          y: -0.001,
-          repeat: 1,
-          yoyo: true,
-          duration: 0.2,
-          ease: "power2.inOut",
-        })
-
-        // displayValues(e, "keydown");
+      gsap.to(this.randomKey.position, {
+        y: -0.001,
+        repeat: 1,
+        yoyo: true,
+        duration: 0.02,
+        ease: "power2.inOut",
       })
     })
 
+    // this.debug()
     this.resize()
     this.setupResize()
-    this.addLights()
+    // this.addLights()
+    this.addFog()
     this.addObjects()
     this.addModels()
     this.render()
@@ -181,10 +144,9 @@ export default class Sketch {
     this.floorGeo = new THREE.PlaneBufferGeometry(20, 20)
     this.floorGeo.rotateX(-Math.PI * 0.5)
     this.material = new THREE.MeshBasicMaterial({
-      color: "white",
+      color: 0x000000,
     })
     this.floor = new THREE.Mesh(this.floorGeo, this.material)
-    this.floor.receiveShadow = true
 
     this.scene.add(this.floor)
 
@@ -197,9 +159,11 @@ export default class Sketch {
     this.world.addBody(this.cFloorBody)
 
     //Display
-    this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.5)
+    this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.6)
     this.displayMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: "green",
+      transparent: true,
+      opacity: 0.2,
     })
     this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
     this.display.position.set(0, 0.75, 2.97)
@@ -230,7 +194,14 @@ export default class Sketch {
     body.position.set(0, 0, 2.5)
     this.world.addBody(body)
 
-    this.updateAllMaterials()
+    //SIDE CANNON
+    const side = new CANNON.Body({
+      mass: 0,
+      shape: new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)),
+      material: this.defaultMaterial,
+    })
+    side.position.set(-1.1, 0, 3.2)
+    this.world.addBody(side)
   }
 
   addLetter(e) {
@@ -249,11 +220,11 @@ export default class Sketch {
       const keyNameGeometry = new THREE.TextBufferGeometry(KEYNAME, {
         font: font,
         size: 1,
-        height: 0.5,
+        height: 0.4,
         curveSegments: 5,
         bevelEnabled: true,
         bevelThickness: 0.05,
-        bevelSize: 0.05,
+        bevelSize: 0.07,
         bevelOffset: 0,
         bevelSegments: 5,
       })
@@ -261,10 +232,10 @@ export default class Sketch {
       const keyCodeGeometry = new THREE.TextBufferGeometry(KEYCODE, {
         font: font,
         size: 1,
-        height: 0.1,
-        curveSegments: 5,
+        height: 0.3,
+        curveSegments: 3,
         bevelEnabled: true,
-        bevelThickness: 0.05,
+        bevelThickness: 0.01,
         bevelSize: 0.05,
         bevelOffset: 0,
         bevelSegments: 5,
@@ -278,20 +249,20 @@ export default class Sketch {
       })
       const mesh = new THREE.Mesh(keyNameGeometry, material)
       mesh.position.y = 0.5
-      mesh.castShadow = true
-
+      // mesh.castShadow = true
+      mesh.name = "key"
       this.scene.add(mesh)
 
       //show key and keyCode
       const textSide = new THREE.Mesh(keyNameGeometry, material)
-      textSide.position.set(-1.2, 0.4, 3.1)
-      textSide.scale.set(0.3, 0.3, 0.3)
+      textSide.position.set(-1.13, 0.4, 3.15)
+      textSide.scale.set(0.2, 0.2, 0.2)
       textSide.name = "textSide"
       this.textOnSide = textSide
 
       const keyCode = new THREE.Mesh(keyCodeGeometry, material)
-      keyCode.position.set(0, 0.75, 3)
-      keyCode.scale.set(0.25, 0.25, 0.25)
+      keyCode.position.set(0, 0.77, 2.8)
+      keyCode.scale.set(0.28, 0.28, 0.28)
       this.scene.add(keyCode)
       keyCode.name = "keyCode"
 
@@ -326,21 +297,34 @@ export default class Sketch {
     })
   }
 
-  addLights() {
-    this.light = new THREE.AmbientLight(0xffffff, 1)
+  removeLetter() {
+    // console.log(this.objectToUpdate)
+    this.scene.remove(this.scene.getObjectByName("key"))
+    this.world.removeBody(this.objectToUpdate[0].body)
+    this.objectToUpdate.shift()
+  }
 
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+  addLights() {
+    this.light = new THREE.AmbientLight(0xffffff, 0.3)
+
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
     this.directionalLight.position.set(2, 2, 2)
-    this.directionalLight.castShadow = true
-    this.directionalLight.shadow.camera.far = 6
-    this.directionalLight.shadow.mapSize.set(1024, 1024)
+    // this.directionalLight.castShadow = true
+    // this.directionalLight.shadow.camera.far = 6
+    // this.directionalLight.shadow.mapSize.set(1024, 1024)
     this.scene.add(this.light, this.directionalLight)
 
     //helper
     const directionalLightCameraHelper = new THREE.CameraHelper(
       this.directionalLight.shadow.camera
     )
-    // this.scene.add(directionalLightCameraHelper)
+    this.scene.add(directionalLightCameraHelper)
+    directionalLightCameraHelper.visible = false
+  }
+
+  addFog() {
+    const fog = new THREE.Fog(0x050505, 5, 8)
+    this.scene.fog = fog
   }
 
   /**
@@ -356,6 +340,11 @@ export default class Sketch {
 
     //World
     this.world.step(1 / 60, deltaTime, 3)
+
+    //remove letter
+    if (this.objectToUpdate.length > 50) {
+      this.removeLetter()
+    }
 
     for (const object of this.objectToUpdate) {
       object.mesh.position.copy(object.body.position)
@@ -373,6 +362,33 @@ export default class Sketch {
     window.requestAnimationFrame(this.render.bind(this))
 
     this.stats.end()
+  }
+
+  debug() {
+    /**
+     * Debug
+     */
+    //Cannon
+    this.cannonDebugRenderer = cannonDebugger(this.scene, this.world.bodies)
+
+    //GUI
+    const gui = new dat.GUI({ closed: true })
+
+    const parameters = {
+      bgColor: 0xffffff,
+      floorColor: 0xffffff,
+    }
+
+    //colors
+    gui
+      .addColor(parameters, "bgColor")
+      .onChange(() => [
+        (this.scene.background = new THREE.Color(parameters.bgColor)),
+      ])
+
+    gui
+      .addColor(parameters, "floorColor")
+      .onChange(() => [this.material.color.set(parameters.floorColor)])
   }
 }
 
