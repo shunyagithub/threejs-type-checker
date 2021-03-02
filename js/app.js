@@ -1,6 +1,8 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer"
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js"
 import * as CANNON from "cannon-es"
 import gsap from "gsap"
 import Stats from "stats.js"
@@ -75,7 +77,7 @@ export default class Sketch {
       this.defaultMaterial,
       this.defaultMaterial,
       {
-        friction: 0.1,
+        friction: 0.5,
         restitution: 0.1, //bounce def .3
       }
     )
@@ -120,6 +122,7 @@ export default class Sketch {
     this.resize()
     this.setupResize()
     // this.addLights()
+
     this.addFog()
     this.addObjects()
     this.addModels()
