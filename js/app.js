@@ -1,11 +1,20 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import * as CANNON from "cannon-es"
+import gsap from "gsap"
 import Stats from "stats.js"
 import { AmbientLight } from "three"
 import { World } from "cannon-es"
 
 import myMatcap from "../matcaps/eva01-3.png"
+import myModel from "../models/pc.glb"
+import envPx from "../img/envmaps/0/px.png"
+import envNx from "../img/envmaps/0/nx.png"
+import envPy from "../img/envmaps/0/py.png"
+import envNy from "../img/envmaps/0/ny.png"
+import envPz from "../img/envmaps/0/pz.png"
+import envNz from "../img/envmaps/0/nz.png"
 
 export default class Sketch {
   constructor(options) {
@@ -31,6 +40,10 @@ export default class Sketch {
      * Utils
      */
     this.objectToUpdate = []
+    this.textOnSide = null
+
+    //keys
+    this.keysObjcts = null
 
     /**
      * Scene
@@ -42,11 +55,39 @@ export default class Sketch {
     this.width = this.container.offsetWidth
     this.height = this.container.offsetHeight
 
+    //Update materials
+    this.updateAllMaterials = () => {
+      this.scene.traverse((child) => {
+        if (
+          child instanceof THREE.Mesh &&
+          child.material instanceof THREE.MeshStandardMaterial
+        ) {
+          child.material.envMapIntensity = Object.envMapIntensity
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+    }
+
+    //envMap
+    const cubeTextureLoader = new THREE.CubeTextureLoader()
+    this.enviromentMap = cubeTextureLoader.load([
+      envPx,
+      envNx,
+      envPy,
+      envNy,
+      envPz,
+      envNz,
+    ])
+    this.enviromentMap.encoding = THREE.sRGBEncoding
+    this.scene.environment = this.enviromentMap
+    this.objectToUpdate.envMapIntensity = 5
+
     /**
      * Camera
      */
     this.camera = new THREE.PerspectiveCamera(
-      75,
+      60,
       this.width / this.height,
       0.01,
       100
@@ -96,6 +137,20 @@ export default class Sketch {
 
       document.addEventListener("keydown", (e) => {
         this.addLetter(e)
+
+        //press random key
+        this.randomNum = gsap.utils.random(0, 22, 1)
+        this.keys = this.keysObjcts.slice(4, 27)
+        this.randomKey = this.keys[this.randomNum]
+
+        gsap.to(this.randomKey.position, {
+          y: -0.001,
+          repeat: 1,
+          yoyo: true,
+          duration: 0.2,
+          ease: "power2.inOut",
+        })
+
         // displayValues(e, "keydown");
       })
     })
@@ -104,7 +159,7 @@ export default class Sketch {
     this.setupResize()
     this.addLights()
     this.addObjects()
-
+    this.addModels()
     this.render()
   }
 
@@ -131,6 +186,8 @@ export default class Sketch {
     this.floor = new THREE.Mesh(this.floorGeo, this.material)
     this.floor.receiveShadow = true
 
+    this.scene.add(this.floor)
+
     //Floor CANNON
     this.cFloorBody = new CANNON.Body({
       mass: 0,
@@ -139,42 +196,115 @@ export default class Sketch {
     this.cFloorBody.quaternion.setFromEuler(-Math.PI * 0.5, 0, 0)
     this.world.addBody(this.cFloorBody)
 
-    this.scene.add(this.floor)
+    //Display
+    this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.5)
+    this.displayMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+    })
+    this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
+    this.display.position.set(0, 0.75, 2.97)
+    this.display.rotation.x = -Math.PI * 0.02
+    this.scene.add(this.display)
+  }
+
+  addModels() {
+    /**
+     * Models
+     */
+    const gltfLoader = new GLTFLoader()
+
+    gltfLoader.load(myModel, (gltf) => {
+      gltf.scene.scale.set(0.5, 0.5, 0.5)
+      gltf.scene.position.set(0, 0, 2.5)
+      this.scene.add(gltf.scene)
+
+      this.keysObjcts = gltf.scene.children
+    })
+
+    //PC CANNON
+    const body = new CANNON.Body({
+      mass: 0,
+      shape: new CANNON.Box(new CANNON.Vec3(0.7, 1.2, 0.7)),
+      material: this.defaultMaterial,
+    })
+    body.position.set(0, 0, 2.5)
+    this.world.addBody(body)
+
+    this.updateAllMaterials()
   }
 
   addLetter(e) {
+    // console.log(e)
     /**
      * Fonts
      */
     const fontLoader = new THREE.FontLoader()
 
-    const TEXT = e.key == " " ? "SpaceBar" : e.key
+    const KEYNAME = e.key === " " ? "Space" : e.key
+    const KEYCODE = e.keyCode.toString()
+
+    // const
 
     fontLoader.load("helvetiker_regular.typeface.json", (font) => {
-      const textGeometry = new THREE.TextBufferGeometry(TEXT, {
+      const keyNameGeometry = new THREE.TextBufferGeometry(KEYNAME, {
         font: font,
         size: 1,
         height: 0.5,
         curveSegments: 5,
         bevelEnabled: true,
-        bevelThickness: 0.03,
+        bevelThickness: 0.05,
         bevelSize: 0.05,
         bevelOffset: 0,
         bevelSegments: 5,
       })
-      textGeometry.center()
-      const size = textGeometry.boundingBox.getSize(new THREE.Vector3())
 
+      const keyCodeGeometry = new THREE.TextBufferGeometry(KEYCODE, {
+        font: font,
+        size: 1,
+        height: 0.1,
+        curveSegments: 5,
+        bevelEnabled: true,
+        bevelThickness: 0.05,
+        bevelSize: 0.05,
+        bevelOffset: 0,
+        bevelSegments: 5,
+      })
+      keyNameGeometry.center()
+      keyCodeGeometry.center()
+
+      const size = keyNameGeometry.boundingBox.getSize(new THREE.Vector3()) //get size for cannon body
       const material = new THREE.MeshMatcapMaterial({
         matcap: this.matcapTexture,
       })
-      const mesh = new THREE.Mesh(textGeometry, material)
+      const mesh = new THREE.Mesh(keyNameGeometry, material)
       mesh.position.y = 0.5
       mesh.castShadow = true
 
       this.scene.add(mesh)
 
-      //Test CANNON
+      //show key and keyCode
+      const textSide = new THREE.Mesh(keyNameGeometry, material)
+      textSide.position.set(-1.2, 0.4, 3.1)
+      textSide.scale.set(0.3, 0.3, 0.3)
+      textSide.name = "textSide"
+      this.textOnSide = textSide
+
+      const keyCode = new THREE.Mesh(keyCodeGeometry, material)
+      keyCode.position.set(0, 0.75, 3)
+      keyCode.scale.set(0.25, 0.25, 0.25)
+      this.scene.add(keyCode)
+      keyCode.name = "keyCode"
+
+      const selectedObject = []
+      selectedObject.push(this.scene.getObjectByName("textSide"))
+      selectedObject.push(this.scene.getObjectByName("keyCode"))
+      for (let i = 0; i < selectedObject.length; i++) {
+        this.scene.remove(selectedObject[i]) //remove text on the side
+      }
+
+      this.scene.add(textSide, keyCode)
+
+      //Text CANNON
       const body = new CANNON.Body({
         mass: 1,
         shape: new CANNON.Box(size.multiplyScalar(0.5)),
@@ -197,9 +327,9 @@ export default class Sketch {
   }
 
   addLights() {
-    this.light = new THREE.AmbientLight(0xfffff, 0.3)
+    this.light = new THREE.AmbientLight(0xffffff, 1)
 
-    this.directionalLight = new THREE.DirectionalLight(0x00ffff, 1)
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1)
     this.directionalLight.position.set(2, 2, 2)
     this.directionalLight.castShadow = true
     this.directionalLight.shadow.camera.far = 6
@@ -232,12 +362,14 @@ export default class Sketch {
       object.mesh.quaternion.copy(object.body.quaternion)
     }
 
+    if (this.textOnSide) {
+      this.textOnSide.rotation.y = elapsedTime
+    }
+
     // Update controls
     this.controls.update()
 
     this.renderer.render(this.scene, this.camera)
-
-    // this.renderer.shadowMap.enabled = true
     window.requestAnimationFrame(this.render.bind(this))
 
     this.stats.end()
