@@ -9,11 +9,11 @@ import Stats from "stats.js"
 import * as dat from "dat.gui"
 import cannonDebugger from "cannon-es-debugger"
 
-import myMatcap1 from "../img/matcaps/9.png"
-import myMatcap2 from "../img/matcaps/10.png"
-import myMatcap3 from "../img/matcaps/11.png"
-import myMatcap4 from "../img/matcaps/12.png"
-import myModel from "../models/pc1.glb"
+import myMatcap1 from "../assets/img/matcaps/9.png"
+import myMatcap2 from "../assets/img/matcaps/10.png"
+import myMatcap3 from "../assets/img/matcaps/11.png"
+import myMatcap4 from "../assets/img/matcaps/12.png"
+import myModel from "../assets/models/pc1.glb"
 
 export default class Sketch {
   constructor(options) {
@@ -229,7 +229,7 @@ export default class Sketch {
       this.KEYCODE = e.keyCode.toString()
     }
 
-    fontLoader.load("helvetiker_regular.typeface.json", (font) => {
+    fontLoader.load("fonts/helvetiker_regular.typeface.json", (font) => {
       const keyNameGeometry = new THREE.TextBufferGeometry(this.KEYNAME, {
         font: font,
         size: 1,
