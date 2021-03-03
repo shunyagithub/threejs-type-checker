@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "parcel ./*.html --no-cache --no-source-maps --out-dir dist/top --target browser",
-    "build": "parcel build index.html"
+    "build": "parcel build src/index.html"
   },
   "dependencies": {
     "cannon-es": "^0.16.0",
