@@ -1,0 +1,31 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-family: Helvetica, sans-serif;
+}
+canvas {
+  display: block;
+}
+#container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: grab;
+}
+
+#footer {
+  position: absolute;
+  bottom: 5px;
+  .footer-box {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    h1,
+    p {
+      margin-right: 20px;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 15px;
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import "../style.scss"
+
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
@@ -10,7 +12,8 @@ import cannonDebugger from "cannon-es-debugger"
 import myMatcap1 from "../img/matcaps/9.png"
 import myMatcap2 from "../img/matcaps/10.png"
 import myMatcap3 from "../img/matcaps/11.png"
-import myModel from "../models/pc3.glb"
+import myMatcap4 from "../img/matcaps/12.png"
+import myModel from "../models/pc1.glb"
 
 export default class Sketch {
   constructor(options) {
@@ -20,7 +23,7 @@ export default class Sketch {
      */
     this.stats = new Stats()
     this.stats.showPanel(0)
-    document.body.appendChild(this.stats.dom)
+    // document.body.appendChild(this.stats.dom)
 
     /**
      * Textures
@@ -29,6 +32,7 @@ export default class Sketch {
     this.matcapTexture = this.textureLoader.load(myMatcap1)
     this.matcapTexture2 = this.textureLoader.load(myMatcap2)
     this.matcapTexture3 = this.textureLoader.load(myMatcap3)
+    this.matcapTexture4 = this.textureLoader.load(myMatcap4)
 
     /**
      * Utils
@@ -45,6 +49,9 @@ export default class Sketch {
     this.textOnSide = null
     this.keysObjcts = null
 
+    this.KEYNAME = "Press Key"
+    this.KEYCODE = "3kc"
+
     /**
      * Scene
      */
@@ -59,13 +66,13 @@ export default class Sketch {
      * Camera
      */
     this.camera = new THREE.PerspectiveCamera(
-      60,
+      90,
       this.width / this.height,
       0.01,
       100
     )
     this.camera.updateProjectionMatrix()
-    this.camera.position.set(0, 1, 6)
+    this.camera.position.set(0, 0.7, 4.5)
 
     /**
      * Cannon
@@ -110,27 +117,26 @@ export default class Sketch {
 
       //press random key
       this.randomNum = gsap.utils.random(0, 22, 1)
-      this.keys = this.keysObjcts.slice(4, 27)
+      this.keys = this.keysObjcts.slice(3, 26)
       this.randomKey = this.keys[this.randomNum]
 
-      gsap.to(this.randomKey.position, {
-        y: -0.001,
-        repeat: 1,
-        yoyo: true,
-        duration: 0.02,
-        ease: "power2.inOut",
+      gsap.from(this.randomKey.position, {
+        duration: 0.03,
+        y: -0.1,
       })
     })
 
     // this.debug()
     this.resize()
     this.setupResize()
-    // this.addLights()
+    this.addLights()
 
     this.addFog()
     this.addObjects()
     this.addModels()
     this.render()
+
+    this.addLetter()
   }
 
   setupResize() {
@@ -154,7 +160,7 @@ export default class Sketch {
       color: 0xffffff,
     })
     this.floor = new THREE.Mesh(this.floorGeo, this.material)
-
+    this.floor.position.y = -0.0001
     this.scene.add(this.floor)
 
     //Floor CANNON
@@ -168,9 +174,9 @@ export default class Sketch {
     //Display
     this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.6)
     this.displayMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: 0xffff00,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.1,
     })
     this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
     this.display.position.set(0, 0.75, 2.97)
@@ -218,25 +224,25 @@ export default class Sketch {
      */
     const fontLoader = new THREE.FontLoader()
 
-    const KEYNAME = e.key === " " ? "Space" : e.key
-    const KEYCODE = e.keyCode.toString()
-
-    // const
+    if (e) {
+      this.KEYNAME = e.key === " " ? "Space" : e.key
+      this.KEYCODE = e.keyCode.toString()
+    }
 
     fontLoader.load("helvetiker_regular.typeface.json", (font) => {
-      const keyNameGeometry = new THREE.TextBufferGeometry(KEYNAME, {
+      const keyNameGeometry = new THREE.TextBufferGeometry(this.KEYNAME, {
         font: font,
         size: 1,
         height: 0.4,
-        curveSegments: 15,
+        curveSegments: 10,
         bevelEnabled: true,
         bevelThickness: 0.05,
         bevelSize: 0.05,
         bevelOffset: 0,
-        bevelSegments: 15,
+        bevelSegments: 10,
       })
 
-      const keyCodeGeometry = new THREE.TextBufferGeometry(KEYCODE, {
+      const keyCodeGeometry = new THREE.TextBufferGeometry(this.KEYCODE, {
         font: font,
         size: 1,
         height: 0.3,
@@ -250,36 +256,35 @@ export default class Sketch {
       keyNameGeometry.center()
       keyCodeGeometry.center()
 
-      const matcaps = [
-        this.matcapTexture,
-        this.matcapTexture2,
-        this.matcapTexture3,
-      ]
+      // const matcaps = [
+      //   this.matcapTexture,
+      //   this.matcapTexture2,
+      //   this.matcapTexture3,
+      // ]
 
-      let randomMatcap
-      console.log(((e.keyCode * Math.random()) % 3).toFixed(0))
+      // let randomMatcap
+      // console.log(((e.keyCode * Math.random()) % 3).toFixed(0))
 
-      switch (Number(((e.keyCode * Math.random()) % 3).toFixed(0))) {
-        case 0:
-          randomMatcap = matcaps[0]
-          break
-        case 1:
-          randomMatcap = matcaps[1]
-          break
-        case 2:
-          randomMatcap = matcaps[2]
-          break
-        default:
-          randomMatcap = matcaps[0]
-      }
+      // switch (Number(((e.keyCode * Math.random()) % 3).toFixed(0))) {
+      //   case 0:
+      //     randomMatcap = matcaps[0]
+      //     break
+      //   case 1:
+      //     randomMatcap = matcaps[1]
+      //     break
+      //   case 2:
+      //     randomMatcap = matcaps[2]
+      //     break
+      //   default:
+      //     randomMatcap = matcaps[0]
+      // }
 
       const size = keyNameGeometry.boundingBox.getSize(new THREE.Vector3()) //get size for cannon body
       const material = new THREE.MeshMatcapMaterial({
-        matcap: randomMatcap,
+        matcap: this.matcapTexture4,
       })
       const mesh = new THREE.Mesh(keyNameGeometry, material)
       mesh.position.y = 0.5
-      // mesh.castShadow = true
       mesh.name = "key"
       this.scene.add(mesh)
 
@@ -292,7 +297,7 @@ export default class Sketch {
 
       const keyCode = new THREE.Mesh(keyCodeGeometry, material)
       keyCode.position.set(0, 0.77, 2.8)
-      keyCode.scale.set(0.28, 0.28, 0.28)
+      keyCode.scale.set(0.25, 0.25, 0.25)
       this.scene.add(keyCode)
       keyCode.name = "keyCode"
 
@@ -311,12 +316,19 @@ export default class Sketch {
         shape: new CANNON.Box(size.multiplyScalar(0.5)),
         material: this.defaultMaterial,
       })
-      body.position.set(Math.random(), 5, Math.random())
-      body.quaternion.setFromEuler(
-        0,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      )
+
+      if (e) {
+        body.position.set(Math.random(), 5, Math.random())
+        body.quaternion.setFromEuler(
+          0,
+          Math.random() * Math.PI,
+          Math.random() * Math.PI
+        )
+      } else {
+        body.position.set(0, 5, 0)
+        body.quaternion.setFromEuler(0, 0, Math.PI * 0.1)
+      }
+
       this.world.addBody(body)
 
       // save in objects to update
@@ -335,13 +347,11 @@ export default class Sketch {
   }
 
   addLights() {
-    this.light = new THREE.AmbientLight(0xffffff, 0.3)
+    this.light = new THREE.AmbientLight(0xffffff, 0.5)
 
     this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
     this.directionalLight.position.set(2, 2, 2)
-    // this.directionalLight.castShadow = true
-    // this.directionalLight.shadow.camera.far = 6
-    // this.directionalLight.shadow.mapSize.set(1024, 1024)
+
     this.scene.add(this.light, this.directionalLight)
 
     //helper
