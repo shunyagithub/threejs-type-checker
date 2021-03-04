@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "parcel ./*.html --no-cache --no-source-maps --out-dir dist/top --target browser",
-    "build": "parcel build index.html"
+    "build": "npx -p parcel-bundler@1.12.3 parcel build index.html"
   },
   "dependencies": {
     "cannon-es": "^0.16.0",
