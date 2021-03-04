@@ -114,16 +114,7 @@ export default class Sketch {
      */
     document.addEventListener("keydown", (e) => {
       this.addLetter(e)
-
-      //press random key
-      this.randomNum = gsap.utils.random(0, 22, 1)
-      this.keys = this.keysObjcts.slice(3, 26)
-      this.randomKey = this.keys[this.randomNum]
-
-      gsap.from(this.randomKey.position, {
-        duration: 0.03,
-        y: -0.1,
-      })
+      this.keyDown()
     })
 
     // this.debug()
@@ -215,6 +206,18 @@ export default class Sketch {
     })
     side.position.set(-1.1, 0, 3.2)
     this.world.addBody(side)
+  }
+
+  keyDown() {
+    //press random key
+    this.randomNum = gsap.utils.random(0, 22, 1)
+    this.keys = this.keysObjcts.slice(3, 26)
+    this.randomKey = this.keys[this.randomNum]
+
+    gsap.from(this.randomKey.position, {
+      duration: 0.03,
+      y: -0.1,
+    })
   }
 
   addLetter(e) {
