@@ -38,18 +38,19 @@ export default class Sketch {
      * Utils
      */
     this.container = options.dom
+    this.isReadyToType = false
 
     this.clock = new THREE.Clock()
     this.oldElapsedTime = 0
     this.objectToUpdate = []
 
-    this.letterCount = 80
+    this.letterCount = 100
 
     //keys
     this.textOnSide = null
     this.keysObjcts = null
 
-    this.KEYNAME = "Press Key"
+    this.KEYNAME = "Press Keys"
     this.KEYCODE = "3kc"
 
     /**
@@ -57,7 +58,7 @@ export default class Sketch {
      */
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0xffffff)
-    this.scene.add(new THREE.GridHelper(20, 40))
+    this.scene.add(new THREE.GridHelper(40, 40))
 
     this.width = this.container.offsetWidth
     this.height = this.container.offsetHeight
@@ -108,14 +109,77 @@ export default class Sketch {
      */
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
+    this.controls.enabled = false
 
     /**
-     * Press Keys
+     * Loaders
      */
-    document.addEventListener("keydown", (e) => {
-      this.addLetter(e)
-      this.keyDown()
+    this.loadingBarElement = document.querySelector(".loading-bar")
+    this.footerElement = document.querySelector(".footer-box")
+    this.loadingManeger = new THREE.LoadingManager(
+      //Loaded
+      () => {
+        gsap.to(overlayMaterial.uniforms.uAlpha, {
+          onStart: () => {
+            this.loadingBarElement.classList.add("ended")
+            this.loadingBarElement.style.transform = ""
+            this.addLetter()
+          },
+          duration: 1,
+          value: 0,
+          delay: 1,
+          onComplete: () => {
+            this.isReadyToType = true
+            this.controls.enabled = true
+            /**
+             * Press Keys
+             */
+            if (this.isReadyToType) {
+              document.addEventListener("keydown", (e) => {
+                this.addLetter(e)
+                this.keyDown()
+              })
+            }
+          },
+        })
+
+        gsap.to(this.footerElement, {
+          opacity: 1,
+          duration: 1,
+          delay: 1,
+        })
+      },
+      //Progress
+      (itemUrl, itemLoaded, itemTotal) => {
+        const progressRatio = itemLoaded / itemTotal
+        this.loadingBarElement.style.transform = `translate(-50%, -50%) scaleX(${progressRatio})`
+      }
+    )
+
+    /**
+     * Overlay
+     */
+    const overlayGeomerty = new THREE.PlaneBufferGeometry(2, 2, 1, 1)
+    const overlayMaterial = new THREE.ShaderMaterial({
+      //   wireframe: true,
+      transparent: true,
+      uniforms: {
+        uAlpha: { value: 1 },
+      },
+      vertexShader: `
+        void main(){
+            gl_Position = vec4(position, 1.0);
+        }
+    `,
+      fragmentShader: `
+        uniform float uAlpha;
+        void main(){
+            gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+        }
+    `,
     })
+    const overlay = new THREE.Mesh(overlayGeomerty, overlayMaterial)
+    this.scene.add(overlay)
 
     // this.debug()
     this.resize()
@@ -126,8 +190,6 @@ export default class Sketch {
     this.addObjects()
     this.addModels()
     this.render()
-
-    this.addLetter()
   }
 
   setupResize() {
@@ -163,23 +225,24 @@ export default class Sketch {
     this.world.addBody(this.cFloorBody)
 
     //Display
-    this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.6)
-    this.displayMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffff00,
-      transparent: true,
-      opacity: 0.1,
-    })
-    this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
-    this.display.position.set(0, 0.75, 2.97)
-    this.display.rotation.x = -Math.PI * 0.02
-    this.scene.add(this.display)
+    // this.displayGeo = new THREE.PlaneBufferGeometry(0.8, 0.6)
+    // this.displayMaterial = new THREE.MeshBasicMaterial({
+    //   color: 0xff0000,
+    //   // transparent: true,
+    //   // opacity: 1,
+    // })
+    // this.display = new THREE.Mesh(this.displayGeo, this.displayMaterial)
+    // this.display.position.set(0, 0.75, 2.97)
+    // this.display.rotation.x = -Math.PI * 0.02
+    // this.display.name = "display"
+    // this.scene.add(this.display)
   }
 
   addModels() {
     /**
      * Models
      */
-    const gltfLoader = new GLTFLoader()
+    const gltfLoader = new GLTFLoader(this.loadingManeger)
 
     gltfLoader.load(myModel, (gltf) => {
       gltf.scene.scale.set(0.5, 0.5, 0.5)
@@ -294,7 +357,7 @@ export default class Sketch {
       //show key and keyCode
       const textSide = new THREE.Mesh(keyNameGeometry, material)
       textSide.position.set(-1.13, 0.4, 3.15)
-      textSide.scale.set(0.2, 0.2, 0.2)
+      textSide.scale.set(0.18, 0.18, 0.18)
       textSide.name = "textSide"
       this.textOnSide = textSide
 
@@ -321,6 +384,7 @@ export default class Sketch {
       })
 
       if (e) {
+        //Falling keys
         body.position.set(Math.random(), 5, Math.random())
         body.quaternion.setFromEuler(
           0,
@@ -328,6 +392,7 @@ export default class Sketch {
           Math.random() * Math.PI
         )
       } else {
+        //Press Keys
         body.position.set(0, 5, 0)
         body.quaternion.setFromEuler(0, 0, Math.PI * 0.1)
       }
